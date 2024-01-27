@@ -1,0 +1,8 @@
+NAME                      ROLES    AGE    VERSION  STATUS    
+somelong-node-name-1231   <none>   66m    v1.26    Ready     
+somelong-node-name-1231   <none>   66m    v1.26    Ready     
+somelong-node-name-1231   <none>   66m    v1.26    Cordoned  
+somelong-node-name-1231   <none>   66m    v1.26    NotReady  
+somelong-node-name-3211   <none>   66m    v1.26    Ready     
+somelong-node-name-4421   <none>   66m    v1.26    Ready     
+somelong-node-name-1231   <none>   66m    v1.26    Ready     
