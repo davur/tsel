@@ -140,6 +140,9 @@ class Lesh:
 
     def interactive(self, w):
 
+        f = open("/dev/tty")
+        os.dup2(f.fileno(), 0)
+
         y = 0
         selected = 0
 
