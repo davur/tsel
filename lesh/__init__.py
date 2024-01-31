@@ -24,6 +24,7 @@ from docopt import docopt
 from utils import dprint
 import utils
 
+import os
 import sys
 import curses
 
@@ -38,6 +39,20 @@ class Lesh:
     where = None
 
     is_interactive = False
+
+    def print_options(self):
+        command = ["lesh"]
+
+        if self.select_columns:
+            csv = ",".join(self.select_columns)
+            command.append(f"--select='{csv}'")
+
+        if self.where:
+            condition = f'{self.where[0]}={self.where[1]}'
+            command.append(f"--where='{condition}'")
+
+        print(" ".join(command))
+
 
     def load_infile(self, infile):
         lines = None
@@ -119,6 +134,7 @@ class Lesh:
 
         if self.is_interactive:
             curses.wrapper(self.interactive)
+            self.print_options()
         else:
             self.table()
 
