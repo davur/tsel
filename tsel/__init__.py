@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
-"""lesh helps filter, sort and display tabular data
+"""tsel helps filter, sort and display tabular data
 
 Usage:
-  lesh [--interactive] [--file=FILE] [--select=COL1,COL2] [--where=CONDITION]
-  lesh --select NAME,AGE --where STATUS=Pending --order-by NAME
-  lesh [options]
-  lesh [--help | --version]
+  tsel [--interactive] [--file=FILE] [--select=COL1,COL2] [--where=CONDITION]
+  tsel --select NAME,AGE --where STATUS=Pending --order-by NAME
+  tsel [options]
+  tsel [--help | --version]
 
 Options:
   -h, --help             Show this screen.
@@ -21,19 +21,22 @@ Options:
 """
 from docopt import docopt
 
-from utils import dprint
-import utils
-
-import os
-import sys
 import curses
+import os
+import re
+import sys
+# from time import sleep
 
-class Lesh:
+multiple_spaces = re.compile('  +')
+
+
+class Tsel:
 
     headerline = None
     lines = None
     columns = None  # dict of column_name => (start, end) character indices
     rows = None
+    filtered_rows = None
 
     select_columns = None
     where = None
@@ -41,18 +44,15 @@ class Lesh:
     is_interactive = False
 
     def print_options(self):
-        command = ["lesh"]
+        command = ["tsel"]
 
         if self.select_columns:
             csv = ",".join(self.select_columns)
             command.append(f"--select='{csv}'")
-
         if self.where:
             condition = f'{self.where[0]}={self.where[1]}'
             command.append(f"--where='{condition}'")
-
         print(" ".join(command))
-
 
     def load_infile(self, infile):
         lines = None
@@ -65,7 +65,7 @@ class Lesh:
         self.headerline = lines.pop(0)
         self.lines = lines
 
-        column_names = self.headerline.split()
+        column_names = multiple_spaces.split(self.headerline)
         if not len(column_names) == len(set(column_names)):
             raise NotImplementedError("Duplicate column names not supported")
 
@@ -78,7 +78,7 @@ class Lesh:
 
             if len(column_names):
                 c2 = column_names[0]
-                stop = self.headerline.index(c2, len(c))
+                stop = self.headerline.index(c2, start)
             else:
                 stop = len(self.headerline)
 
@@ -107,9 +107,8 @@ class Lesh:
         arguments = docopt(str(__doc__), version="0.0.1")
 
         debug = arguments['--debug']
-        utils.debug = bool(debug)
         if debug:
-            dprint(arguments)
+            print(arguments)
 
         filename = arguments['--file']
         self.load_infile(filename)
@@ -117,7 +116,7 @@ class Lesh:
         self.is_interactive = arguments['--interactive']
 
         self.select_columns = arguments['--select']
-        if self.select_columns == 'ALL':
+        if (not self.select_columns) or self.select_columns == 'ALL':
             self.select_columns = list(self.columns.keys())
         else:
             self.select_columns = [c.strip()
@@ -131,6 +130,10 @@ class Lesh:
                     print("Unknown column '{col}' found in --where")
                     exit()
                 self.where = (col, val)
+                self.filtered_rows = [row for row in self.rows if
+                                      row[self.columns[col][0]] == val]
+        if not self.where:
+            self.filtered_rows = list(self.rows)
 
         if self.is_interactive:
             curses.wrapper(self.interactive)
@@ -143,6 +146,7 @@ class Lesh:
         f = open("/dev/tty")
         os.dup2(f.fileno(), 0)
 
+
         y = 0
         selected = 0
 
@@ -151,9 +155,12 @@ class Lesh:
             curses.init_pair(2, curses.COLOR_WHITE, curses.COLOR_GREEN)
             curses.init_pair(3, curses.COLOR_MAGENTA, curses.COLOR_CYAN)
 
+        ri = 0
+
         while True:
             w.clear()
-            self.table(w.addstr)
+            maxr, maxc = w.getmaxyx()
+            self.table(w.addstr, ri, 0, ri + maxr - 2, maxc - 2)
 
             ch = w.getch()
             if ch == ord('q'): # q
@@ -162,6 +169,12 @@ class Lesh:
                 self.select_prompt(w)
             elif ch == ord('w'):
                 self.where_prompt(w)
+            if ch == ord('j'):
+                ri += 1
+                ri = min(ri, len(self.filtered_rows))
+            if ch == ord('k'):
+                ri -= 1
+                ri = max(0, ri)
             else:
                 s = f'{ch=}'
                 self.statusline(w, s)
@@ -178,11 +191,11 @@ class Lesh:
         rows, cols = w.getmaxyx()
         w.addstr(rows - 2, 0, f'{msg: <{cols}}', curses.A_STANDOUT)
         # TODO look into why just rows throws error, but rows - 2 doesn't
-        #   File "/Users/davur/repos/davur/lesh/lesh/__init__.py", line 130, in interactive
+        #   File "/Users/davur/repos/davur/tsel/tsel/__init__.py", line 130, in interactive
         # self.select_prompt(w)
-        # File "/Users/davur/repos/davur/lesh/lesh/__init__.py", line 206, in select_prompt
+        # File "/Users/davur/repos/davur/tsel/tsel/__init__.py", line 206, in select_prompt
         # self.statusline(w, msg)
-        # File "/Users/davur/repos/davur/lesh/lesh/__init__.py", line 150, in statusline
+        # File "/Users/davur/repos/davur/tsel/tsel/__init__.py", line 150, in statusline
         # w.addstr(68, 0, f'{msg: <{cols}}', curses.A_STANDOUT)
         # _curses.error: addwstr() returned ERR
 
@@ -199,9 +212,10 @@ class Lesh:
         while True:
             y = 0
             w.clear()
+            maxr, maxc = w.getmaxyx()
             w.refresh()
             col = all_columns[selected_col]
-            if x == 1:
+            if x == 1 and selected_val < len(distinct_values):
                 val = distinct_values[selected_val]
             else:
                 val = ""
@@ -237,17 +251,19 @@ class Lesh:
                     s = f'{val: <20}'
                     w.addstr(2 + y, 21, s, attr)
                     y += 1
+                    if y > maxr - 5:
+                        break
 
 
             ch = w.getch()
 
             # Move cursor
-            if ch == 258 or ch == 106: # down
+            if ch == 258 or ch == ord('j'): # down
                 if x == 0:
                     selected_col += 1
                 else:
                     selected_val += 1
-            elif ch == 259 or ch == 107: # up
+            elif ch == 259 or ch == ord('k'): # up
                 if x == 0:
                     selected_col -= 1
                 else:
@@ -267,7 +283,11 @@ class Lesh:
             # Back to table
             if ch == 10: # enter
                 if x == 1:
-                    self.where = (all_columns[selected_col], distinct_values[selected_val])
+                    col = all_columns[selected_col]
+                    val = distinct_values[selected_val]
+                    self.where = (col, val)
+                    self.filtered_rows = [row for row in self.rows if
+                                          row[self.columns[col][0]] == val]
                 return
 
 
@@ -338,38 +358,60 @@ class Lesh:
     def distinct_values(self, col):
         col_index = self.columns[col][0]
         values = set([row[col_index] for row in self.rows])
-        return list(values)
+        values = list(values)
+        values.sort()
+        return values
 
 
-    def table(self, write=None):
+    def table(self, write=None, rmin=0, cmin=0, rmax=100, cmax=100):
         if not write:
             write = sys.stdout.write
-        if not self.select_columns:
-            write(self.headerline)
-            write('\n')
-        else:
-            for c in self.select_columns:
-                _, start, stop = self.columns[c]
-                if len(self.headerline) > start:
-                    width = stop - start
+#         if not self.select_columns:
+#             write(self.headerline)
+#             write('\n')
+#         else:
+        ci = 0
+        for c in self.select_columns:
+            _, start, stop = self.columns[c]
+            if len(self.headerline) > start:
+                width = stop - start
+                if ci + width < cmax:
                     write(f'{self.headerline[start:stop]: <{width}}')
-            write('\n')
+                    ci += width
+        write('\n')
 
-        for row in self.rows:
-            if not self.select_columns:
-                write(line)
-                write('\n')
+        rmin = max(0, rmin)
+        rmin = min(rmin, 1+len(self.filtered_rows))
+        rmax = min(rmax, 1+len(self.filtered_rows))
+
+        ri = -1
+
+        for row in self.filtered_rows:
+
+            ri += 1
+            ci = 0
+
+            if ri < rmin:
                 continue
+            if ri >= rmax:
+                break
 
-            if self.where:
-                col, val = self.where
-                if row[self.columns[col][0]] != val:
-                    continue
+#             if not self.select_columns:
+#                 write(line)
+#                 write('\n')
+#                 continue
+
+#             if self.where:
+#                 col, val = self.where
+#                 if row[self.columns[col][0]] != val:
+#                     continue
 
             for c in self.select_columns:
                 index, start, stop = self.columns[c]
                 width = stop - start
-                write(f'{row[index]: <{width}}')
+                if ci + width < cmax:
+                    write(f'{row[index]: <{width}}')
+                    ci += width
             write('\n')
 
 #         for line in self.lines:
@@ -396,30 +438,17 @@ class Lesh:
 
 
     def print(self):
-        if not self.select_columns:
-            print(self.headerline)
-        else:
-            for c in self.select_columns:
-                start, stop = self.columns[c]
-                if len(self.headerline) > start:
-                    width = stop - start
-                    print(f'{self.headerline[start:stop]: <{width}}', end='')
-            print()
+        for c in self.select_columns:
+            start, stop = self.columns[c]
+            if len(self.headerline) > start:
+                width = stop - start
+                print(f'{self.headerline[start:stop]: <{width}}', end='')
+        print()
 
         for line in self.lines:
-            if not self.select_columns:
-                print(line)
-                continue
-
             for c in self.select_columns:
                 start, stop = self.columns[c]
                 if len(line) > start:
                     width = stop - start
                     print(f'{line[start:stop]: <{width}}', end='')
             print()
-
-if __name__ == '__main__':
-    lesh = Lesh()
-    lesh.main()
-    # wrapper(main)
-    # lesh.interactive()

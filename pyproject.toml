@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tsel"
+version = "0.0.8"
+authors = [
+  { name="Davur", email="davur@davur.net" },
+]
+description = "A small CLI tool for tabular data"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+  "docopt>0.6",
+]
+
+[project.scripts]
+tsel = "tsel.__main__:tsel_cli"
+
+[project.urls]
+Homepage = "https://github.com/davur/tsel"
+Issues = "https://github.com/davur/tsel/issues"
+
