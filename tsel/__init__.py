@@ -25,6 +25,8 @@ import curses
 import os
 import re
 import sys
+
+from importlib import metadata
 # from time import sleep
 
 multiple_spaces = re.compile('  +')
@@ -104,7 +106,9 @@ class Tsel:
 
 
     def main(self):
-        arguments = docopt(str(__doc__), version="0.0.1")
+        version = metadata.version('tsel')
+        arguments = docopt(str(__doc__), version=version)
+
 
         debug = arguments['--debug']
         if debug:
