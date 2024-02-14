@@ -78,7 +78,7 @@ class Tsel:
 
             if len(column_names):
                 c2 = column_names[0]
-                stop = self.headerline.index(c2, start)
+                stop = self.headerline.index(c2, start + len(c))
             else:
                 stop = len(self.headerline)
 
