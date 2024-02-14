@@ -89,7 +89,7 @@ class Tsel:
         max_length = start
         for line in lines:
             max_length = max(max_length, len(line))
-        columns[c] = (columns[c][0], columns[c][1], max_length)
+        columns[c] = (columns[c][0], columns[c][1], max_length + 2)
 
         self.columns = columns
 
