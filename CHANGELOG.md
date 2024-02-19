@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 0.0.10
+
+- Increase max rows in non-interactive mode
+
 ## 0.0.9
 
 - Fix column name parsing
