@@ -367,13 +367,15 @@ class Tsel:
         return values
 
 
-    def table(self, write=None, rmin=0, cmin=0, rmax=100, cmax=100):
+    def table(self, write=None, rmin=0, cmin=0, rmax=None, cmax=None):
+        if rmax is None:
+            rmax = 1 + len(self.filtered_rows)
+        if cmax is None:
+            cmax = sys.maxsize
+
+
         if not write:
             write = sys.stdout.write
-#         if not self.select_columns:
-#             write(self.headerline)
-#             write('\n')
-#         else:
         ci = 0
         for c in self.select_columns:
             _, start, stop = self.columns[c]
