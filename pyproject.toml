@@ -4,11 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tsel"
-version = "0.0.10"
+version = "0.0.11"
 authors = [
   { name="Davur", email="davur@davur.net" },
 ]
-description = "A small CLI tool for tabular data"
+description = "tsel - like less, grep and awk had a lovechild.\n\nA small CLI tool for tabular data"
 readme = "README.md"
 requires-python = ">=3.8"
 classifiers = [

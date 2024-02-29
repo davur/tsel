@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## 0.0.11
+
+- Add faster navigation via f/b, u/d, PageUp/PageDown, g/G
+- Add hints statusbar and
+- Add Help screen
+- Add support for multiple filters CLI arguments (cummilative AND filtering) 
+- Add support for "pattern" row filtering
+- Add filtering on <, >, <=, >=, !=, <> comparitor (CLI argument only)
+- Filter on numeric values over alphabetical (4 < 10, not '4'<'10')
+
 ## 0.0.10
 
 - Increase max rows in non-interactive mode
