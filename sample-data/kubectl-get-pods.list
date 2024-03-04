@@ -1,0 +1,7 @@
+NAMESPACE   NAME                           READY   STATUS            RESTARTS        AGE    IP              NODE        NOMINATED NODE   READINESS GATES
+lark        nginx-69cf8c646f-2xrzg         2/2     Running           0               2d19h  10.244.35.53    10.1.0.40   <none>           <none>
+lark        lark-server-60cf8c646f-9xpw9   2/2     Running           4 (1d10h ago)   2d16h  10.244.56.64    10.1.0.70   <none>           <none>
+lark        lark-server-69cf8c646f-s27xd   2/2     Running           0               16h    10.244.35.37    10.1.0.40   <none>           <none>
+lark        blarg-blarg-69cf8c646f-tmqdh   2/2     ImagePullBackOff  0               16h    10.244.34.63    10.1.0.20   <none>           <none>
+pidgeon     acc-proxy-6cb6b09c8-5855j      1/1     Pending           0               3s     10.244.34.95    10.1.0.20   <none>           <none>
+pidgeon     messaging-6cb6bd9c8-fdccw      1/1     Running           0               8h     10.244.56.102   10.1.0.70   <none>           <none>

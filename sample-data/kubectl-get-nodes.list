@@ -1,0 +1,8 @@
+NAME              STATUS   ROLES    AGE     VERSION   INTERNAL-IP    EXTERNAL-IP   OS-IMAGE             KERNEL-VERSION      CONTAINER-RUNTIME
+k8s-meb-master1   Ready    master   14d     v1.14.3   10.30.29.11    <none>        Ubuntu 18.04.2 LTS   4.15.0-51-generic   docker://18.9.5
+k8s-meb-master2   Ready    master   14d     v1.14.3   10.30.29.12    <none>        Ubuntu 18.04.2 LTS   4.15.0-51-generic   docker://18.9.6
+k8s-meb-worker1   Ready    <none>   14d     v1.14.3   10.30.29.13    <none>        Ubuntu 18.04.2 LTS   4.15.0-51-generic   docker://18.9.5
+k8s-meb-worker2   Ready    <none>   14d     v1.14.3   10.30.29.14    <none>        Ubuntu 18.04.2 LTS   4.15.0-51-generic   docker://18.9.5
+k8s-meb-worker3   Ready    <none>   14d     v1.14.3   10.30.29.15    <none>        Ubuntu 18.04.2 LTS   4.15.0-51-generic   docker://18.9.5
+k8s-meb-worker4   Ready    <none>   14d     v1.14.2   10.30.29.16    <none>        Ubuntu 18.04.2 LTS   4.15.0-51-generic   docker://18.9.5
+k8s-meb-worker5   Ready    <none>   5d19h   v1.14.2   10.30.29.151   <none>        Ubuntu 18.04 LTS     4.15.0-20-generic   docker://18.9.5
