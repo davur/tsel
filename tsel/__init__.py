@@ -61,7 +61,7 @@ class Tsel:
         self.rows = []
         self.filtered_rows = []
         self.select_columns = []
-        self.where = []
+        self.wheres = []
         self.quit = False
         self.is_interactive = False
 
@@ -72,9 +72,14 @@ class Tsel:
         if self.select_columns:
             csv = ",".join(self.select_columns)
             command.append(f"--select='{csv}'")
-        if self.where:
-            condition = f'{self.where[0]}={self.where[1]}'
-            command.append(f"--where='{condition}'")
+        if self.wheres:
+            for where in self.wheres:
+                col, cmp, val = where
+                if col is None:
+                    command.append(f"--where='{val}'")
+                else:
+                    command.append(f"--where='{col}{cmp}{val}'")
+
         print(" ".join(command))
 
     def load_infile(self, infile):
@@ -144,6 +149,37 @@ class Tsel:
         return 0
 
 
+    def filter(self):
+        self.filtered_rows = []
+
+        for i, row in enumerate(self.rows):
+            matches = True
+
+            for where in self.wheres:
+                col, cmp, val = where
+
+                if col is None:
+                    line = self.lines[i]
+                    matches &= (val in line)
+
+                else:
+                    if cmp == '=' or cmp == '==':
+                        matches &= (row[self.columns[col][0]] == val)
+                    elif cmp == '!=' or cmp == '<>':
+                        matches &= (row[self.columns[col][0]] != val)
+                    elif cmp == '<':
+                        matches &= (self.compare(row[self.columns[col][0]], val) < 0)
+                    elif cmp == '<=':
+                        matches &= (self.compare(row[self.columns[col][0]], val) <= 0)
+                    elif cmp == '>':
+                        matches &= (self.compare(row[self.columns[col][0]], val) > 0)
+                    elif cmp == '>=':
+                        matches &= (self.compare(row[self.columns[col][0]], val) >= 0)
+
+            if matches:
+                self.filtered_rows.append(row)
+
+
     def main(self):
         version = metadata.version('tsel')
         arguments = docopt(str(__doc__), version=version)
@@ -167,55 +203,31 @@ class Tsel:
 
         self.filtered_rows = list(self.rows)
 
-
-
-        self.where = []
+        self.wheres = []
         wheres = arguments['--where']
 
         pattern = arguments['<pattern>']
         if pattern:
-            wheres.insert(0, pattern)
+            self.wheres.insert(0, (None, None, pattern))
 
         for where in wheres:
             parts = comparitors.split(where, 1)
             # parts = where.split("=", 1)
-            print(parts)
+            # print(parts)
 
             # TODO process row filters before column filters
             if len(parts) == 1:
                 filtered_rows = []
-                for i, line in enumerate(self.lines):
-                    if pattern in line:
-                        filtered_rows.append(self.rows[i])
-                self.filtered_rows = filtered_rows
+                self.wheres.insert(0, (None, None, parts[0]))
 
             elif len(parts) == 3:
                 col, cmp, val = parts
                 if col not in self.columns:
                     print("Unknown column '{col}' found in --where")
                     exit()
-                self.where.append((col, cmp, val))
-                filtered_rows = []
-                for row in self.filtered_rows:
-                    if cmp == '=' or cmp == '==':
-                        if row[self.columns[col][0]] == val:
-                           filtered_rows.append(row)
-                    elif cmp == '!=' or cmp == '<>':
-                        if row[self.columns[col][0]] != val:
-                           filtered_rows.append(row)
-                    elif cmp == '<':
-                        if self.compare(row[self.columns[col][0]], val) < 0:
-                           filtered_rows.append(row)
-                    elif cmp == '<=':
-                        if self.compare(row[self.columns[col][0]], val) <= 0:
-                           filtered_rows.append(row)
-                    elif cmp == '>':
-                        if self.compare(row[self.columns[col][0]], val) > 0:
-                           filtered_rows.append(row)
-                    elif cmp == '>=':
-                        if self.compare(row[self.columns[col][0]], val) >= 0:
-                           filtered_rows.append(row)
-                self.filtered_rows = filtered_rows
+                self.wheres.append((col, cmp, val))
+
+        self.filter()
 
         if self.is_interactive:
             curses.wrapper(self.interactive)
@@ -331,6 +343,9 @@ class Tsel:
         selected_col = 0
         selected_val = 0
 
+        ch = None
+        cmp = '='
+
         all_columns = self.all_columns()
         distinct_values = [] # ['Ready', 'Cordoned', 'NotReady']
 
@@ -350,8 +365,8 @@ class Tsel:
             else:
                 w.addstr(0, 0, "Choose a value: ", curses.A_BOLD)
 
-            msg = f"--where='{col}={val}'"
-            help = "↑↓/kj: Select column   ←→/hl: Toggle column/value dropdown    Enter: Apply filter"
+            msg = f"--where='{col}{cmp}{val}'"
+            help = "←→/hl: column/value dropdown   =/</>/!: Change comparison   Enter: Apply"
             self.statusline(w, help, msg)
 
             for col in all_columns:
@@ -381,7 +396,23 @@ class Tsel:
                         break
 
 
+            prev_ch = ch
             ch = w.getch()
+
+            if ch == ord('!'):
+                cmp = '!='
+            elif ch == ord('<'):
+                cmp = '<'
+            elif ch == ord('>'):
+                if prev_ch == ord('<'):
+                    cmp = '<>'
+                else:
+                    cmp = '>'
+            elif ch == ord('='):
+                if prev_ch in [ord('<'), ord('>'), ord('!')]:
+                    cmp = f'{chr(prev_ch)}{chr(ch)}'
+                else:
+                    cmp = '='
 
             if ch == ord('q'):
                 self.quit = True
@@ -415,9 +446,8 @@ class Tsel:
                 if x == 1:
                     col = all_columns[selected_col]
                     val = distinct_values[selected_val]
-                    self.where = [(col, val)]
-                    self.filtered_rows = [row for row in self.rows if
-                                          row[self.columns[col][0]] == val]
+                    self.wheres = [(col, cmp, val)]
+                    self.filter()
                 return
 
 

@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 0.0.12
+
+- Refactor filtering code
+- Add interactive support for filtering on all comparitors
+- Add print-options with multiple filters
+
 ## 0.0.11
 
 - Add faster navigation via f/b, u/d, PageUp/PageDown, g/G
