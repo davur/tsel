@@ -21,6 +21,7 @@ Options:
 from docopt import docopt
 
 import curses
+import csv
 import os
 import re
 import sys
@@ -82,6 +83,7 @@ class Tsel:
 
         print(" ".join(command))
 
+
     def load_infile(self, infile):
         lines = None
         if infile == '-':
@@ -90,13 +92,65 @@ class Tsel:
             with open(infile, 'r', encoding='UTF-8') as file:
                 lines = file.read().splitlines()
 
-        self.headerline = lines.pop(0)
-        self.lines = lines
+        headerline = lines[0]
 
-        column_names = multiple_spaces.split(self.headerline)
+        tokens = multiple_spaces.split(headerline)
+
+        # TODO: format as Enum ??
+        input_format = 0
+        if len(tokens) > 1:
+            input_format = 1
+        else:
+            tokens = ",".split(headerline)
+
+            if len(tokens) > 1:
+                input_format = 2
+
+        column_names = tokens  # multiple_spaces.split(self.headerline)
+
+
         if not len(column_names) == len(set(column_names)):
             raise NotImplementedError("Duplicate column names not supported")
 
+        if input_format == 1:
+            self.headerline = lines.pop(0)
+            self.lines = lines
+            self.load_tabular(column_names)
+        else:
+            self.load_csv(lines)
+
+
+    def load_csv(self, lines):
+
+        reader = csv.DictReader(lines)
+
+        widths = []
+
+        self.rows = []
+        # [ [r1v1, r1v2, r1v3], [r2v1, r2v2, r2v3], ...]
+        for row in reader:
+            if not self.columns:
+                # column[column_name] = (index, start, stop)
+                self.columns = {}
+                for index, key in enumerate(row.keys()):
+                    self.columns[key] = (index, 0, 0)
+                    widths.append(len(key)+2)
+
+            row = list(row.values())
+
+            for index, value in enumerate(row):
+                if len(value) + 2 > widths[index]:
+                    widths[index] = len(value) + 2
+
+            self.rows.append(row)
+
+
+        for col in self.columns:
+            idx, start, _ = self.columns[col]
+            self.columns[col] = (idx, start, widths[idx])
+
+
+    def load_tabular(self, column_names):
         # Work out column name => (start, end) character indices
         columns = dict()
         start = 0
@@ -115,14 +169,14 @@ class Tsel:
 
         # Get last column width from data
         max_length = start
-        for line in lines:
+        for line in self.lines:
             max_length = max(max_length, len(line))
         columns[c] = (columns[c][0], columns[c][1], max_length + 2)
 
         self.columns = columns
 
         rows = []
-        for line in lines:
+        for line in self.lines:
             row = []
             for col in columns:
                 _, start, stop = columns[col]
@@ -223,7 +277,7 @@ class Tsel:
             elif len(parts) == 3:
                 col, cmp, val = parts
                 if col not in self.columns:
-                    print("Unknown column '{col}' found in --where")
+                    print(f"Unknown column '{col}' found in --where")
                     exit()
                 self.wheres.append((col, cmp, val))
 
@@ -540,11 +594,15 @@ class Tsel:
         ci = 0
         for c in self.select_columns:
             _, start, stop = self.columns[c]
-            if len(self.headerline) > start:
-                width = stop - start
-                if ci + width < cmax:
-                    write(f'{self.headerline[start:stop]: <{width}}')
-                    ci += width
+            width = stop - start
+            # if len(self.headerline) > start:
+            #     width = stop - start
+            #     if ci + width < cmax:
+            #         write(f'{self.headerline[start:stop]: <{width}}')
+            #         ci += width
+
+            write(f'{c: <{width}}')
+
         write('\n')
 
         rmin = max(0, rmin)
@@ -602,7 +660,6 @@ class Tsel:
 #                     width = stop - start
 #                     write(f'{line[start:stop]: <{width}}')
 #             write('\n')
-
 
     def print(self):
         for c in self.select_columns:

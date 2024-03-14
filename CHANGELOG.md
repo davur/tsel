@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 0.0.13
+
+- Adds basic support for input in CSV format
+
 ## 0.0.12
 
 - Refactor filtering code
